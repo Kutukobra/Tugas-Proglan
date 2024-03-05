@@ -1,4 +1,72 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
+#if defined(_WIN32)
+#define CLEAR "cls"
+#elif defined(unix)
+#define CLEAR "clear"
+#endif
+
+
+#define ACCOUNT_MAX 10
+
+typedef struct Account
+{
+    char email[32];
+    char password[32];
+    int tokens;
+} Account;
+
+int accountCreate(Account *accountList)
+{
+    static int accountCount = 0;
+
+
+    if (accountCount >= ACCOUNT_MAX)
+    {
+        return -1; // Error: Max Users
+    }
+    
+    printf("|====Register Account====|\n");
+    printf("EMAIL: ");
+    scanf("%s", accountList[accountCount].email);
+    printf("Password: ");
+    scanf("%s", accountList[accountCount].password);
+
+    return ++accountCount;
+}
+
+void accountLogin(Account *accounts, int *currentAccount)
+{
+    char email[32];
+    char password[32];
+
+    printf("|======Account Login=====|\n");
+    printf("EMAIL: ");
+    scanf("%s", email);
+    printf("Password: ");
+    scanf("%s", password);
+
+    for (int i = 0; i < ACCOUNT_MAX; i++)
+    {
+        if (strcmp(email, accounts[i].email) == 0)
+        {
+            if (strcmp(password, accounts[i].password) == 0)
+            {
+                *currentAccount = i;
+                return;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+    printf("Wrong EMAIL OR PASSWORD!");
+    getchar();getchar();
+}
 
 enum UNIT_TYPE
 {
@@ -62,18 +130,25 @@ float convertTemperature(float input, enum UNIT_TYPE inputType, enum UNIT_TYPE o
     return (input - UNITS[inputType].freezing) * (UNITS[outputType].scale / UNITS[inputType].scale) + UNITS[outputType].freezing;
 }
 
-void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputType, float outputData)
+void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputType, float outputData, bool converted, bool loggedIn, int userID, Account *accounts)
 {
-    system("clear");
-    printf("|=TEMPERATURE CONVERSION=|\n");
+    system(CLEAR);
+    printf("|=TEMPERATURE CONVERSION=|%s\n", loggedIn ? accounts[userID].email : "");
     printf("| 1. Change Input Value  |\n");
     printf("| 2. Change Input Scale  |\n");
     printf("| 3. Change Output Scale |\n");
-    printf("| 4. Help                |\n");
+    printf("| 4. Convert Value       |\n");
+    printf("| 5. %-8s            |\n", loggedIn ? "Logout" : "Login");
+    printf("| 6. Register Account    |\n");
+    printf("| 7. Help                |\n");
     printf("|========================|\n");
 
     printf("| %-10s > %10s|\n", UNITS[inputType].name, UNITS[outputType].name);
-    printf("| %-7.2f %-2s > %7.2f %-2s|\n", inputData, UNITS[inputType].unit, outputData, UNITS[outputType].unit);
+    
+    if (converted)
+        printf("| %-7.2f %-2s > %7.2f %-2s|\n", inputData, UNITS[inputType].unit, outputData, UNITS[outputType].unit);
+    else
+        printf("| %-7.2f %-2s >  _ _ _  %-2s|\n", inputData, UNITS[inputType].unit, UNITS[outputType].unit);
 
     printf("|========================|\n");
     
@@ -86,7 +161,8 @@ void help()
     printf(" 1. Change the input value of the conversion.\n");
     printf(" 2. Change the input temperature scale of conversion.\n");
     printf(" 3. Change the output temperature scale of conversion.\n");
-    printf(" 4. Display this help menu\n");
+    printf(" 4. Converts the value.\n");
+    printf(" 5. Display this help menu\n");
     printf("\n\nThis program converts the scales with water boiling and freezing points at standard pressure.\n");
     printf("Formula: \n");
     printf("==========================================================================================\n");
@@ -94,7 +170,7 @@ void help()
     printf("|[OUTPUT VALUE] =                                      --------------                    |\n");
     printf("|                                                       [INPUT SCALE]                    |\n");
     printf("==========================================================================================\n");
-    system("pause");
+    int c = getchar();getchar();
 }
 
 int main()
@@ -104,14 +180,20 @@ int main()
     enum UNIT_TYPE inputType = 0, outputType = 0;
     float inputData, outputData;
     
+    Account accounts[ACCOUNT_MAX];
+
+    bool hasConverted = false, loggedIn = false;
+
+    int currentAccount = 0; 
     while (option != EOF)
     {
-        outputData = convertTemperature(inputData, inputType, outputType);
 
-        mainMenu(inputType, inputData, outputType, outputData);
+        mainMenu(inputType, inputData, outputType, outputData, hasConverted, loggedIn, currentAccount, accounts);
         scanf("%d", &option);
 
-        system("clear");
+        system(CLEAR);
+
+        hasConverted = false;
         switch (option)
         {
             enum UNIT_TYPE unitSelect;
@@ -147,6 +229,19 @@ int main()
                 break;
             
             case 4:
+                outputData = convertTemperature(inputData, inputType, outputType);
+                hasConverted = true;
+                break;
+
+            case 5:
+                login(accounts, &currentAccount);
+                break;
+            
+            case 6:
+                accountCreate(accounts);
+                break;
+
+            case 7:
                 help();
                 break;
             
