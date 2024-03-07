@@ -38,7 +38,7 @@ int accountCreate(Account *accountList)
     return ++accountCount;
 }
 
-void accountLogin(Account *accounts, int *currentAccount)
+bool accountLogin(Account *accounts, int *currentAccount)
 {
     char email[32];
     char password[32];
@@ -56,7 +56,7 @@ void accountLogin(Account *accounts, int *currentAccount)
             if (strcmp(password, accounts[i].password) == 0)
             {
                 *currentAccount = i;
-                return;
+                return true;
             }
             else
             {
@@ -66,6 +66,7 @@ void accountLogin(Account *accounts, int *currentAccount)
     }
     printf("Wrong EMAIL OR PASSWORD!");
     getchar();getchar();
+    return false;
 }
 
 enum UNIT_TYPE
@@ -234,7 +235,14 @@ int main()
                 break;
 
             case 5:
-                login(accounts, &currentAccount);
+                if (loggedIn == false)
+                {
+                    loggedIn = accountLogin(accounts, &currentAccount);
+                }
+                else
+                {
+                    loggedIn = false;
+                }
                 break;
             
             case 6:
