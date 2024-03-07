@@ -16,14 +16,12 @@ typedef struct Account
 {
     char email[32];
     char password[32];
-    char token[32];
-    int tokens;
+    int tokens_count;
 } Account;
 
 int accountCreate(Account *accountList)
 {
     static int accountCount = 0;
-
 
     if (accountCount >= ACCOUNT_MAX)
     {
@@ -36,10 +34,11 @@ int accountCreate(Account *accountList)
     printf("Password: ");
     scanf("%s", accountList[accountCount].password);
 
+    accountList[accountCount].tokens_count = 10;
     return ++accountCount;
 }
 
-bool accountLogin(Account *accounts, int *currentAccount)
+void accountLogin(Account *accounts, int *currentAccount)
 {
     char email[32];
     char password[32];
@@ -57,7 +56,7 @@ bool accountLogin(Account *accounts, int *currentAccount)
             if (strcmp(password, accounts[i].password) == 0)
             {
                 *currentAccount = i;
-                return true;
+                return;
             }
             else
             {
@@ -67,7 +66,6 @@ bool accountLogin(Account *accounts, int *currentAccount)
     }
     printf("Wrong EMAIL OR PASSWORD!");
     getchar();getchar();
-    return false;
 }
 
 void accountLogout(bool *loggedIn, int *currentAccount) {
@@ -77,15 +75,16 @@ void accountLogout(bool *loggedIn, int *currentAccount) {
     getchar(); getchar(); // Pause
 }
 
-void handleTokenInput(Account *account) {
-    if (account->tokens >= 10) {
-        printf("Token maksimal 10, masukkan token baru! ");
-        scanf("%s", account->tokens);
-        account->tokens = 0; 
-    } else {
-        printf("You have %d conversions left.\n", 10 - account->tokens);
-    }
+void inputToken(Account *account)
+{
+    char token[30];
+    printf("Input token: ");
+    scanf("%s", token);
+    account->tokens_count++;
+    printf("Token success for %s!", account->email);
+    getchar();getchar();
 }
+
 enum UNIT_TYPE
 {
     UNIT_CELCIUS,
@@ -133,8 +132,12 @@ const struct UNIT_CELCIUS UNITS[] = {
     }
 };
 
-void temperatureSelection()
+#define INPUT 0
+#define OUTPUT 1
+void temperatureSelection(int side)
 {
+    printf("|====Select New %6s===|\n", side ? "Output" : "Input");
+    printf("|====Temperature Scale===|\n");
     printf("| 1. Celcius             |\n");
     printf("| 2. Rankine             |\n");
     printf("| 3. Kelvin              |\n");
@@ -151,15 +154,13 @@ float convertTemperature(float input, enum UNIT_TYPE inputType, enum UNIT_TYPE o
 void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputType, float outputData, bool converted, bool loggedIn, int userID, Account *accounts)
 {
     system(CLEAR);
-    printf("|=TEMPERATURE CONVERSION=|%s\n", loggedIn ? accounts[userID].email : "");
+    printf("|=TEMPERATURE CONVERSION=|%10s\n", loggedIn ? accounts[userID].email : "");
     printf("| 1. Change Input Value  |\n");
     printf("| 2. Change Input Scale  |\n");
     printf("| 3. Change Output Scale |\n");
     printf("| 4. Convert Value       |\n");
     printf("| 5. %-8s            |\n", loggedIn ? "Logout" : "Login");
-    if (loggedIn) {
     printf("| 6. Input Token         |\n");
-    }
     printf("| 7. Register Account    |\n");
     printf("| 8. Help                |\n");
     printf("|========================|\n");
@@ -173,7 +174,6 @@ void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputTy
 
     printf("|========================|\n");
     
-    printf("\n> ");
 }
 
 void help()
@@ -191,25 +191,30 @@ void help()
     printf("|[OUTPUT VALUE] =                                      --------------                    |\n");
     printf("|                                                       [INPUT SCALE]                    |\n");
     printf("==========================================================================================\n");
-    int c = getchar();getchar();
+    getchar();getchar();
 }
 
 int main()
 {
     unsigned int option = 0;
+    unsigned short freeTokens = 3;
 
     enum UNIT_TYPE inputType = 0, outputType = 0;
     float inputData, outputData;
     
-    Account accounts[ACCOUNT_MAX] = {{0}};
+    Account accounts[ACCOUNT_MAX];
 
     bool hasConverted = false, loggedIn = false;
 	int currentAccount = -1;
 	 
-    while (1)
+    while (option != EOF)
     {
 
         mainMenu(inputType, inputData, outputType, outputData, hasConverted, loggedIn, currentAccount, accounts);
+        
+        int tokensLeft = loggedIn ? accounts[currentAccount].tokens_count : freeTokens;
+        
+        printf("Tokens left: %d\n> ", tokensLeft);
         scanf("%d", &option);
 
         system(CLEAR);
@@ -224,22 +229,18 @@ int main()
                 break;
             
             case 2:
-                printf("|====Select New Input====|\n");
-                printf("|====Temperature Scale===|\n");
-                temperatureSelection();
+                temperatureSelection(INPUT);
                 scanf("%u", &unitSelect);
                 if (unitSelect < 0 || unitSelect > UNIT_COUNT)
                 {
                     perror("INVALID OPTION!");
                     break;
-                }
+                }   
                 inputType = unitSelect - 1;
                 break;
             
             case 3:
-                printf("|====Select New Output===|\n");
-                printf("|====Temperature Scale===|\n");
-                temperatureSelection();
+                temperatureSelection(OUTPUT);
                 scanf("%u", &unitSelect);
                 if (unitSelect < 0 || unitSelect > UNIT_COUNT)
                 {
@@ -250,17 +251,36 @@ int main()
                 break;
             
             case 4: 
-                if (loggedIn && accounts[currentAccount].tokens >= 10) {
-                    printf("Token limit reached, please enter a new token.\n");
-                    scanf("%s", accounts[currentAccount].token); // Simplistic approach; consider unique token validation in a real scenario
-                    accounts[currentAccount].tokens = 0; // Reset tokens after entering a new token
+                if (loggedIn)
+                {
+                    if (accounts[currentAccount].tokens_count <= 0)
+                    {
+                        printf("Not enough tokens for %s\n", accounts[currentAccount].email);
+                        getchar();getchar();
+                        break;
+                    }
+                    else
+                    {
+                        accounts[currentAccount].tokens_count--;
+                    }
                 }
-                if (loggedIn) {
-                    accounts[currentAccount].tokens++; // Increment token usage
+                else
+                {
+                    if (freeTokens <= 0)
+                    {
+                        printf("Not enough tokens.\n");
+                        getchar();getchar();
+                        break;
+                    }
+                    else
+                    {
+                        freeTokens--;
+                    }
                 }
+
                 outputData = convertTemperature(inputData, inputType, outputType);
                 hasConverted = true;
-                break;;
+                break;
 
             case 5: 
                 if (!loggedIn) {
@@ -270,9 +290,15 @@ int main()
                     accountLogout(&loggedIn, &currentAccount);
                 }
                 break;
+            case 6: 
+                if (!loggedIn)
+                {
+                    printf("Please login first.\n");
+                    getchar();getchar();
+                    break;
+                }
 
-            case 5:
-                login(accounts, &currentAccount);
+                inputToken(&accounts[currentAccount]);
                 break;
             
             case 7:
