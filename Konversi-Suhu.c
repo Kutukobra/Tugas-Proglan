@@ -16,6 +16,7 @@ typedef struct Account
 {
     char email[32];
     char password[32];
+    char token[32];
     int tokens;
 } Account;
 
@@ -68,6 +69,22 @@ void accountLogin(Account *accounts, int *currentAccount)
     getchar();getchar();
 }
 
+void accountLogout(bool *loggedIn, int *currentAccount) {
+    *loggedIn = false;
+    *currentAccount = -1; // Reset to invalid index
+    printf("Logged out successfully.\n");
+    getchar(); getchar(); // Pause
+}
+
+void handleTokenInput(Account *account) {
+    if (account->tokens >= 10) {
+        printf("Token maksimal 10, masukkan token baru! ");
+        scanf("%s", account->tokens);
+        account->tokens = 0; 
+    } else {
+        printf("You have %d conversions left.\n", 10 - account->tokens);
+    }
+}
 enum UNIT_TYPE
 {
     UNIT_CELCIUS,
@@ -139,8 +156,11 @@ void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputTy
     printf("| 3. Change Output Scale |\n");
     printf("| 4. Convert Value       |\n");
     printf("| 5. %-8s            |\n", loggedIn ? "Logout" : "Login");
-    printf("| 6. Register Account    |\n");
-    printf("| 7. Help                |\n");
+    if (loggedIn) {
+    printf("| 6. Input Token         |\n");
+    }
+    printf("| 7. Register Account    |\n");
+    printf("| 8. Help                |\n");
     printf("|========================|\n");
 
     printf("| %-10s > %10s|\n", UNITS[inputType].name, UNITS[outputType].name);
@@ -180,12 +200,12 @@ int main()
     enum UNIT_TYPE inputType = 0, outputType = 0;
     float inputData, outputData;
     
-    Account accounts[ACCOUNT_MAX];
+    Account accounts[ACCOUNT_MAX] = {{0}};
 
     bool hasConverted = false, loggedIn = false;
-
-    int currentAccount = 0; 
-    while (option != EOF)
+	int currentAccount = -1;
+	 
+    while (1)
     {
 
         mainMenu(inputType, inputData, outputType, outputData, hasConverted, loggedIn, currentAccount, accounts);
@@ -228,20 +248,42 @@ int main()
                 outputType = unitSelect - 1;
                 break;
             
-            case 4:
+            case 4: 
+                if (loggedIn && accounts[currentAccount].tokens >= 10) {
+                    printf("Token limit reached, please enter a new token.\n");
+                    scanf("%s", accounts[currentAccount].token); // Simplistic approach; consider unique token validation in a real scenario
+                    accounts[currentAccount].tokens = 0; // Reset tokens after entering a new token
+                }
+                if (loggedIn) {
+                    accounts[currentAccount].tokens++; // Increment token usage
+                }
                 outputData = convertTemperature(inputData, inputType, outputType);
                 hasConverted = true;
-                break;
+                break;;
 
-            case 5:
-                login(accounts, &currentAccount);
+            case 5: 
+                if (!loggedIn) {
+                    accountLogin(accounts, &currentAccount);
+                    loggedIn = currentAccount >= 0; // Update loggedIn based on successful login
+                } else {
+                    accountLogout(&loggedIn, &currentAccount);
+                }
+                break;
+            case 6: 
+                if (loggedIn) {
+                    printf("Please enter your conversion token: ");
+                    scanf("%s", accounts[currentAccount].token);
+                    accounts[currentAccount].tokens = 0; // Assume new token provides a fresh set of conversions
+                } else {
+                    printf("You must be logged in to update your conversion token.\n");
+                }
                 break;
             
-            case 6:
+            case 7:
                 accountCreate(accounts);
                 break;
 
-            case 7:
+            case 8:
                 help();
                 break;
             
