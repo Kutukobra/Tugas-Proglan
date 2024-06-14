@@ -4,15 +4,18 @@
 #include <string.h>
 #include <omp.h>
 
+// Clearing untuk linux atau windows
 #if defined(_WIN32)
 #define CLEAR "cls"
 #elif defined(unix)
 #define CLEAR "clear"
 #endif
 
-
+// Jumlah maksimum akun yang terdaftar
 #define ACCOUNT_MAX 10
 
+
+// Struct account mengandung email, password, dan jumlah token yang bisa dipakai.
 typedef struct Account
 {
     char email[32];
@@ -20,8 +23,10 @@ typedef struct Account
     int tokens_count;
 } Account;
 
+// Fungsi menerima input untuk akun baru. Jika jumlah akun sudah terlalu banyak, return -1
 int accountCreate(Account *accountList)
 {
+    // Variabel statis untuk menghitung jumlah akun yang sudah dibuat.
     static int accountCount = 0;
 
     if (accountCount >= ACCOUNT_MAX)
@@ -35,10 +40,14 @@ int accountCreate(Account *accountList)
     printf("Password: ");
     scanf("%s", accountList[accountCount].password);
 
+    // Default token: 10
     accountList[accountCount].tokens_count = 10;
+    
+    // Mengembalikan jumlah akun yang sudah dibuat.
     return ++accountCount;
 }
 
+// Fungsi login akun, mengecek kesamaan username dan password sebuah akun dalam database.
 void accountLogin(Account *accounts, int *currentAccount)
 {
     char email[32];
@@ -50,12 +59,16 @@ void accountLogin(Account *accounts, int *currentAccount)
     printf("Password: ");
     scanf("%s", password);
 
+    // Mengecek seisi database akun
     for (int i = 0; i < ACCOUNT_MAX; i++)
     {
+        // Jika email ditemukan...
         if (strcmp(email, accounts[i].email) == 0)
         {
+            // Jika password sesuai...
             if (strcmp(password, accounts[i].password) == 0)
             {
+                // Login
                 *currentAccount = i;
                 return;
             }
@@ -65,27 +78,35 @@ void accountLogin(Account *accounts, int *currentAccount)
             }
         }
     }
+
+    // Salah
     printf("Wrong EMAIL OR PASSWORD!");
     getchar();getchar();
 }
 
-void accountLogout(bool *loggedIn, int *currentAccount) {
+void accountLogout(bool *loggedIn, int *currentAccount) 
+{
     *loggedIn = false;
     *currentAccount = -1; // Reset to invalid index
     printf("Logged out successfully.\n");
     getchar(); getchar(); // Pause
 }
 
+// Menerima input string token
 void inputToken(Account *account)
 {
     char token[30];
     printf("Input token: ");
     scanf("%s", token);
+
+    // Menambahkan token akun yang sedang login.
     account->tokens_count++;
     printf("Token success for %s!", account->email);
     getchar();getchar();
 }
 
+
+// ENUM setiap skala temperatur yang tersedia
 enum UNIT_TYPE
 {
     UNIT_CELCIUS,
@@ -94,15 +115,16 @@ enum UNIT_TYPE
     UNIT_FAHRENHEIT
 };
 
+// Jumlah skala temperatur tersedia
 #define UNIT_COUNT 4
 
-struct UNIT_CELCIUS
+struct UNIT_DATA
 {   // Water based, scale = boiling - freezing
     float freezing, boiling, scale;
     char *name, *unit;
 };
 
-const struct UNIT_CELCIUS UNITS[] = {
+const struct UNIT_DATA UNITS[] = {
     {   // Celcius
         0,
         99.9839,
@@ -133,6 +155,7 @@ const struct UNIT_CELCIUS UNITS[] = {
     }
 };
 
+// Mengulangi salah satu value sebanyak value yang lain dalam sebuah array
 void inputArray(int arr[], int i, int j){
     int cnt;
 
@@ -142,6 +165,7 @@ void inputArray(int arr[], int i, int j){
     }
 }
 
+// Menambahkan jumlah seisi array ke akumulator sum sehingga jadi perkalian 
 long long int mul(int arr[], int j){
     int cnt; 
     long long int sum = 0;
@@ -154,14 +178,17 @@ long long int mul(int arr[], int j){
     return sum;
 }
 
+// Mengembalikan yang lebih kecil dari a dan b
 int min(int a, int b){
     return (a < b) ? a : b;
 }
 
+// Mengembalikan yang lebih besar dari a dan b
 int max(int a, int b){
     return (a > b) ? a : b;
 }
 
+// Memastikan salah satu dari angka lebih besar dari 1000
 int checkValue(int x){
     if(x <= 1000){
         printf("\nOne of the number must exceed 1000\n");
@@ -177,6 +204,8 @@ int checkValue(int x){
 
 #define INPUT 0
 #define OUTPUT 1
+
+// Print opsi temperatur
 void temperatureSelection(int side)
 {
     printf("|====Select New %6s===|\n", side ? "Output" : "Input");
@@ -189,11 +218,13 @@ void temperatureSelection(int side)
     printf("\n> ");
 }
 
+// Fungsi konversi suhu dengan interpolasi 
 float convertTemperature(float input, enum UNIT_TYPE inputType, enum UNIT_TYPE outputType)
 {
     return (input - UNITS[inputType].freezing) * (UNITS[outputType].scale / UNITS[inputType].scale) + UNITS[outputType].freezing;
 }
 
+// Menu GUI
 void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputType, float outputData, bool converted, bool loggedIn, int userID, Account *accounts)
 {
     system(CLEAR);
@@ -209,7 +240,6 @@ void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputTy
     printf("| 9. Help                    |\n");
     printf("| 10. Exit                   |\n");
     printf("|============================|\n");
-
     printf("| %-12s > %-12s|\n", UNITS[inputType].name, UNITS[outputType].name);
     
     if (converted)
@@ -221,6 +251,7 @@ void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputTy
     
 }
 
+// Print help page.
 void help()
 {
     printf("TEMPERATURE CONVERSION - Converts the input value according to the input and output temperature scales\n");
@@ -246,8 +277,13 @@ void help()
 
 int main()
 {
+    // Variabel untuk perkalian
     int val1, val2, *array;
+
+    // Variabel pemilihan opsi
     unsigned int option = 0;
+
+    // Token tanpa login
     unsigned short freeTokens = 3;
 
     enum UNIT_TYPE inputType = 0, outputType = 0;
@@ -255,13 +291,17 @@ int main()
     
     Account accounts[ACCOUNT_MAX];
 
+    // State flags
     bool hasConverted = false, loggedIn = false;
+
+    // Akun yang sedang login
 	int currentAccount = -1;
 	
     do
     {
         mainMenu(inputType, inputData, outputType, outputData, hasConverted, loggedIn, currentAccount, accounts);
         
+        // Jika login, jumlah token sesuai akun. Jika belum login, token gratis
         int tokensLeft = loggedIn ? accounts[currentAccount].tokens_count : freeTokens;
         
         printf("Tokens left: %d\n> ", tokensLeft);
@@ -273,11 +313,14 @@ int main()
         switch (option)
         {
             enum UNIT_TYPE unitSelect;
+
+            // Angka temperatur input
             case 1:
                 printf("=Input the new value=\n\n> ");
                 scanf("%f", &inputData);
                 break;
             
+            // Unit temperatur input
             case 2:
                 temperatureSelection(INPUT);
                 scanf("%u", &unitSelect);
@@ -290,6 +333,7 @@ int main()
                 inputType = unitSelect - 1;
                 break;
             
+            // Unit temperatur output
             case 3:
                 temperatureSelection(OUTPUT);
                 scanf("%u", &unitSelect);
@@ -302,9 +346,13 @@ int main()
                 outputType = unitSelect - 1;
                 break;
             
+            // Konversi
             case 4: 
+
+                // Jika telah login
                 if (loggedIn)
                 {
+                    // Jika ternyata token habis
                     if (accounts[currentAccount].tokens_count <= 0)
                     {
                         printf("Not enough tokens for %s\n", accounts[currentAccount].email);
@@ -313,11 +361,13 @@ int main()
                     }
                     else
                     {
+                        // Kurangi token akun
                         accounts[currentAccount].tokens_count--;
                     }
                 }
                 else
                 {
+                    // Menggunakan token gratis
                     if (freeTokens <= 0)
                     {
                         printf("Not enough tokens.\n");
@@ -330,15 +380,19 @@ int main()
                     }
                 }
 
+                // Fungsi konversi
                 outputData = convertTemperature(inputData, inputType, outputType);
                 hasConverted = true;
                 break;
 
+            // Login atau logout
             case 5: 
+                // Jika belum login, login
                 if (!loggedIn) {
                     accountLogin(accounts, &currentAccount);
                     loggedIn = currentAccount >= 0; // Update loggedIn based on successful login
                 } else {
+                    // Jika pernah login, logout
                     accountLogout(&loggedIn, &currentAccount);
                 }
                 break;
