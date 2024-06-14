@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <omp.h>
 
 #if defined(_WIN32)
 #define CLEAR "cls"
@@ -132,6 +133,48 @@ const struct UNIT_CELCIUS UNITS[] = {
     }
 };
 
+void inputArray(int arr[], int i, int j){
+    int cnt;
+
+    #pragma omp parallel for
+    for(cnt = 0; cnt < j; cnt++){
+        arr[cnt] = i;
+    }
+}
+
+long long int mul(int arr[], int j){
+    int cnt; 
+    long long int sum = 0;
+    
+    #pragma omp parallel for reduction (+: sum)
+    for(cnt = 0; cnt < j; cnt++){
+            sum += arr[cnt];
+    }      
+
+    return sum;
+}
+
+int min(int a, int b){
+    return (a < b) ? a : b;
+}
+
+int max(int a, int b){
+    return (a > b) ? a : b;
+}
+
+int checkValue(int x){
+    if(x <= 1000){
+        printf("\nOne of the number must exceed 1000\n");
+        getchar();getchar();
+        
+        system(CLEAR);
+        return 0;
+    }
+    else{
+        return 1;
+    }
+}
+
 #define INPUT 0
 #define OUTPUT 1
 void temperatureSelection(int side)
@@ -154,25 +197,27 @@ float convertTemperature(float input, enum UNIT_TYPE inputType, enum UNIT_TYPE o
 void mainMenu(enum UNIT_TYPE inputType, float inputData, enum UNIT_TYPE outputType, float outputData, bool converted, bool loggedIn, int userID, Account *accounts)
 {
     system(CLEAR);
-    printf("|=TEMPERATURE CONVERSION=|%10s\n", loggedIn ? accounts[userID].email : "");
-    printf("| 1. Change Input Value  |\n");
-    printf("| 2. Change Input Scale  |\n");
-    printf("| 3. Change Output Scale |\n");
-    printf("| 4. Convert Value       |\n");
-    printf("| 5. %-8s            |\n", loggedIn ? "Logout" : "Login");
-    printf("| 6. Input Token         |\n");
-    printf("| 7. Register Account    |\n");
-    printf("| 8. Help                |\n");
-    printf("|========================|\n");
+    printf("|===TEMPERATURE CONVERSION===|%10s\n", loggedIn ? accounts[userID].email : "");
+    printf("| 1. Change Input Value      |\n");
+    printf("| 2. Change Input Scale      |\n");
+    printf("| 3. Change Output Scale     |\n");
+    printf("| 4. Convert Value           |\n");
+    printf("| 5. %-12s            |\n", loggedIn ? "Logout" : "Login");
+    printf("| 6. Input Token             |\n");
+    printf("| 7. Register Account        |\n");
+    printf("| 8. Parallel Multiplication |\n");
+    printf("| 9. Help                    |\n");
+    printf("| 10. Exit                   |\n");
+    printf("|============================|\n");
 
-    printf("| %-10s > %10s|\n", UNITS[inputType].name, UNITS[outputType].name);
+    printf("| %-12s > %-12s|\n", UNITS[inputType].name, UNITS[outputType].name);
     
     if (converted)
-        printf("| %-7.2f %-2s > %7.2f %-2s|\n", inputData, UNITS[inputType].unit, outputData, UNITS[outputType].unit);
+        printf("| %-7.2f %-4s > %7.2f %-4s|\n", inputData, UNITS[inputType].unit, outputData, UNITS[outputType].unit);
     else
-        printf("| %-7.2f %-2s >  _ _ _  %-2s|\n", inputData, UNITS[inputType].unit, UNITS[outputType].unit);
+        printf("| %-7.2f %-4s >  _ _ _  %-4s|\n", inputData, UNITS[inputType].unit, UNITS[outputType].unit);
 
-    printf("|========================|\n");
+    printf("|============================|\n");
     
 }
 
@@ -183,7 +228,12 @@ void help()
     printf(" 2. Change the input temperature scale of conversion.\n");
     printf(" 3. Change the output temperature scale of conversion.\n");
     printf(" 4. Converts the value.\n");
-    printf(" 5. Display this help menu\n");
+    printf(" 5. Login/Logout to an existing account.\n");
+    printf(" 6. Redeem code to get a conversion token.\n");
+    printf(" 7. Register a new account.\n");
+    printf(" 8. Multiply two numbers with multithreading.\n");
+    printf(" 9. Display this help menu.\n");
+    printf(" 10. Exit the program.\n");
     printf("\n\nThis program converts the scales with water boiling and freezing points at standard pressure.\n");
     printf("Formula: \n");
     printf("==========================================================================================\n");
@@ -196,6 +246,7 @@ void help()
 
 int main()
 {
+    int val1, val2, *array;
     unsigned int option = 0;
     unsigned short freeTokens = 3;
 
@@ -206,10 +257,9 @@ int main()
 
     bool hasConverted = false, loggedIn = false;
 	int currentAccount = -1;
-	 
-    while (option != EOF)
+	
+    do
     {
-
         mainMenu(inputType, inputData, outputType, outputData, hasConverted, loggedIn, currentAccount, accounts);
         
         int tokensLeft = loggedIn ? accounts[currentAccount].tokens_count : freeTokens;
@@ -233,7 +283,8 @@ int main()
                 scanf("%u", &unitSelect);
                 if (unitSelect < 0 || unitSelect > UNIT_COUNT)
                 {
-                    perror("INVALID OPTION!");
+                    perror("INVALID OPTION!\n");
+                    getchar();getchar();
                     break;
                 }   
                 inputType = unitSelect - 1;
@@ -244,7 +295,8 @@ int main()
                 scanf("%u", &unitSelect);
                 if (unitSelect < 0 || unitSelect > UNIT_COUNT)
                 {
-                    perror("INVALID OPTION!");
+                    perror("INVALID OPTION!\n");
+                    getchar();getchar();
                     break;
                 }
                 outputType = unitSelect - 1;
@@ -290,6 +342,7 @@ int main()
                     accountLogout(&loggedIn, &currentAccount);
                 }
                 break;
+
             case 6: 
                 if (!loggedIn)
                 {
@@ -306,13 +359,34 @@ int main()
                 break;
 
             case 8:
+                do{
+                    printf("=Input first number=\n> ");
+                    scanf("%d", &val1);
+                    printf("\n=Input second number=\n> ");
+                    scanf("%d", &val2);
+                } while(!checkValue(max(val1, val2)));
+
+                array = (int*)malloc(max(val1, val2)*sizeof(int));
+                inputArray(array, min(val1, val2), max(val1, val2));
+                
+                printf("\nThe result of the multiplication is: %lld\n", mul(array, max(val1, val2)));
+                
+                free(array);
+                getchar();getchar();
+                break;
+
+            case 9:
                 help();
                 break;
             
+            case 10:
+                break;
+
             default:
                 printf("INVALID OPTION!\n");
+                getchar();getchar();
         }
-    }
+    } while(option != 10);
 
     return 0;
 }
